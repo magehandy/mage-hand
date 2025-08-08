@@ -1,0 +1,34 @@
+.mage-hand-status {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-left: 0.5rem;
+}
+
+.mage-hand-status.connected {
+  background-color: #4caf50;
+  animation: pulse 2s infinite;
+}
+
+.mage-hand-status.disconnected {
+  background-color: #f44336;
+}
+
+.mage-hand-status.connecting {
+  background-color: #ff9800;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.mage-hand-session-code {
+  font-family: monospace;
+  font-size: 1.2em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}

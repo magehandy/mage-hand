@@ -1,0 +1,26 @@
+{
+  "MAGEHAND": {
+    "Settings": {
+      "SessionCode": {
+        "Name": "Session Code",
+        "Hint": "Enter the 6-character code from your Mage Hand app (format: XXX-XXX)"
+      },
+      "RelayServer": {
+        "Name": "Relay Server URL",
+        "Hint": "WebSocket relay server URL (default: wss://relay.magehand.org)"
+      }
+    },
+    "Status": {
+      "Connected": "Connected to Mage Hand",
+      "Disconnected": "Disconnected",
+      "Connecting": "Connecting...",
+      "InvalidCode": "Invalid session code format"
+    },
+    "Notifications": {
+      "Connected": "Mage Hand connected successfully",
+      "Disconnected": "Mage Hand disconnected",
+      "ConnectionFailed": "Failed to connect to Mage Hand relay server",
+      "CharacterSynced": "Character {name} synced to mobile app"
+    }
+  }
+}

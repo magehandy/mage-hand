@@ -1,0 +1,50 @@
+{
+  "id": "mage-hand",
+  "title": "Mage Hand",
+  "description": "Real-time character synchronization between Foundry VTT and the Mage Hand iOS companion app",
+  "version": "1.0.0",
+  "authors": [
+    {
+      "name": "Mage Hand",
+      "email": "magehand.org@gmail.com",
+      "url": "https://magehand.org"
+    }
+  ],
+  "compatibility": {
+    "minimum": "11",
+    "verified": "13",
+    "maximum": "13"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "3.0.0",
+          "verified": "5.0.4"
+        }
+      }
+    ]
+  },
+  "esmodules": [
+    "scripts/mage-hand.js"
+  ],
+  "styles": [
+    "styles/mage-hand.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "url": "https://github.com/magehand-org/mage-hand",
+  "manifest": "https://raw.githubusercontent.com/magehand-org/mage-hand/main/module.json",
+  "download": "https://github.com/magehand-org/mage-hand/releases/latest/download/mage-hand.zip",
+  "license": "MIT",
+  "readme": "https://github.com/magehand-org/mage-hand/blob/main/README.md",
+  "bugs": "https://github.com/magehand-org/mage-hand/issues",
+  "changelog": "https://github.com/magehand-org/mage-hand/blob/main/CHANGELOG.md"
+}
