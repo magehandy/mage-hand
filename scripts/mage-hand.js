@@ -2,64 +2,85 @@ import { ExtractorFactory } from './extractors/extractor-factory.js';
 import { RollerFactory } from './rollers/roller-factory.js';
 import { deepDiff } from './utils/deep-diff.js';
 import { SchemaRegistry } from './schemas/schema-registry.js';
+import { WebSocketHandler } from './websocket-handler.js';
+import { UIFactory } from './ui/ui-factory.js';
+import { KillTracker } from './kill-tracker.js';
+import { logger } from './utils/logger.js';
 
 class MageHand {
   constructor() {
     this.moduleId = 'mage-hand';
-    this.socket = null;
+    this.websocketHandler = null;
     this.sessionCode = null;
     this.characterData = new Map();
     this.lastSync = new Map();
     this.extractor = null;
     this.roller = null;
+    this.ui = null;
+    this.killTracker = null;
   }
 
   init() {
-    console.log(`Mage Hand | Initializing module v${game.modules.get(this.moduleId).version}`);
-    console.log(`Mage Hand | Schema version: v${SchemaRegistry.CURRENT_VERSION} (${SchemaRegistry.getCurrentSchema().name})`);
+    logger.info(`Initializing module v${game.modules.get(this.moduleId).version}`);
+    logger.info(`Schema version: v${SchemaRegistry.CURRENT_VERSION} (${SchemaRegistry.getCurrentSchema().name})`);
     this.registerSettings();
     this.detectVersions();
   }
 
-  ready() {
-    console.log('Mage Hand | Module ready');
+  async ready() {
+    logger.info('Module ready');
     this.extractor = ExtractorFactory.getExtractor();
-    console.log(`Mage Hand | Using extractor: ${this.extractor.version}`);
+    logger.verbose(`Using extractor: ${this.extractor.version}`);
     this.roller = RollerFactory.getInstance();
-    console.log(`Mage Hand | Using roller: ${this.roller.version}`);
-    this.registerHooks();
+    logger.verbose(`Using roller: ${this.roller.version}`);
+    this.websocketHandler = new WebSocketHandler(this);
     
-    const savedCode = game.settings.get(this.moduleId, 'sessionCode');
-    if (savedCode) {
-      this.connect(savedCode);
+    // Initialize UI
+    this.ui = await UIFactory.getInstance();
+    this.ui.init(this);
+    
+    // Initialize kill tracker with websocket handler
+    this.killTracker = new KillTracker(this.websocketHandler);
+    this.killTracker.init();
+    
+    this.registerHooks();
+    this.registerUIHooks();
+    
+    // Check for saved session in user flags
+    const session = game.user.getFlag(this.moduleId, 'session');
+    if (session?.valid && session?.code) {
+      // Auto-reconnect if session is less than 24 hours old
+      const sessionAge = Date.now() - (session.timestamp || 0);
+      if (sessionAge < 86400000) { // 24 hours in milliseconds
+        logger.info('Auto-reconnecting to saved session');
+        this.connect(session.code);
+      } else {
+        // Session too old, clear it
+        await game.user.unsetFlag(this.moduleId, 'session');
+      }
     }
   }
 
   registerSettings() {
-    game.settings.register(this.moduleId, 'sessionCode', {
-      name: 'Session Code',
-      hint: 'Enter the 6-character code from your Mage Hand app (format: XXX-XXX)',
-      scope: 'client',
-      config: true,
-      type: String,
-      default: '',
-      onChange: value => {
-        if (value && value.match(/^[A-Z0-9]{3}-[A-Z0-9]{3}$/)) {
-          this.connect(value);
-        } else if (!value && this.socket) {
-          this.disconnect();
-        }
-      }
-    });
+    // Note: Session code is now stored in user flags, not settings
+    // Settings UI is replaced by the connection panel
 
-    game.settings.register(this.moduleId, 'relayServer', {
-      name: 'Relay Server URL',
-      hint: 'WebSocket relay server URL',
-      scope: 'world',
-      config: true,
-      type: String,
-      default: 'wss://relay.magehand.org',
-      restricted: true
+    // Register log level setting (user-scoped)
+    game.settings.register(this.moduleId, 'logLevel', {
+      name: 'Log Level',
+      hint: 'Control the amount of console output from Mage Hand. Debug shows everything, None disables logging.',
+      scope: 'user',       // Each user can set their own log level
+      config: true,        // Show in settings UI
+      type: Number,
+      default: 2,          // Default to INFO level
+      choices: {
+        0: 'Debug - All messages',
+        1: 'Verbose - Detailed info',
+        2: 'Info - Important events only',
+        3: 'Warning - Warnings and errors',
+        4: 'Error - Errors only',
+        5: 'None - No logging'
+      }
     });
 
     // Register schema version as read-only (not shown in config UI)
@@ -81,16 +102,46 @@ class MageHand {
     });
   }
 
+  registerUIHooks() {
+    // Inject button into settings sidebar
+    Hooks.on('renderSidebarTab', (app, html, data) => {
+      logger.debug('renderSidebarTab hook fired', app.tabName, app.id, app);
+      // Check various ways the settings tab might be identified
+      if (app.tabName === 'settings' || app.id === 'settings' || app.options?.id === 'settings') {
+        logger.debug('Injecting button into settings tab');
+        this.ui.injectSettingsButton(html);
+      }
+    });
+    
+    // Alternative hook for Settings specifically
+    Hooks.on('renderSettings', (app, html, data) => {
+      logger.debug('renderSettings hook fired');
+      this.ui.injectSettingsButton(html);
+    });
+    
+    // Also hook into collapseSidebar for when sidebar state changes
+    Hooks.on('collapseSidebar', (app, collapsed) => {
+      // Wait a bit for the DOM to update after sidebar state change
+      setTimeout(() => {
+        const settingsTab = document.querySelector('#sidebar .tab[data-tab="settings"]');
+        if (settingsTab && settingsTab.classList.contains('active')) {
+          const html = $(settingsTab);
+          this.ui.injectSettingsButton(html);
+        }
+      }, 100);
+    });
+  }
+
   registerHooks() {
     Hooks.on('updateActor', (actor, changes, options, userId) => {
-      console.log('Mage Hand | Actor updated:', actor.name);
+      logger.debug('Actor updated:', actor.name);
       if (this.shouldSync(actor, userId)) {
         this.handleActorUpdate(actor, changes);
       }
     });
 
     Hooks.on('updateItem', (item, changes, options, userId) => {
-      console.log('Mage Hand | Item updated:', item.name);
+      logger.debug('Item updated:', item.name);
       const actor = item.parent;
       if (actor && this.shouldSync(actor, userId)) {
         this.handleItemUpdate(actor, item, changes);
@@ -146,8 +197,8 @@ class MageHand {
     const foundryVersion = game.version;
     const dnd5eVersion = game.system.version;
     
-    console.log(`Mage Hand | Foundry VTT: v${foundryVersion}`);
-    console.log(`Mage Hand | D&D 5e System: v${dnd5eVersion}`);
+    logger.verbose(`Foundry VTT: v${foundryVersion}`);
+    logger.verbose(`D&D 5e System: v${dnd5eVersion}`);
     
     this.foundryMajor = parseInt(foundryVersion.split('.')[0]);
     this.dnd5eMajor = parseInt(dnd5eVersion.split('.')[0]);
@@ -155,7 +206,7 @@ class MageHand {
   }
 
   shouldSync(actor, userId) {
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    if (!this.websocketHandler || !this.websocketHandler.isConnected()) return false;
     if (userId !== game.userId) return false;
     if (actor.type !== 'character') return false;
     
@@ -164,39 +215,28 @@ class MageHand {
   }
 
   connect(sessionCode) {
-    console.log(`Mage Hand | Connecting with session code: ${sessionCode}`);
+    logger.info(`Connecting with session code: ${sessionCode}`);
     
-    // Get schema metadata for handshake
-    const schemaMetadata = SchemaRegistry.getHandshakeMetadata();
-    console.log(`Mage Hand | Schema metadata:`, schemaMetadata);
-    
-    // TODO: Implement WebSocket connection
-    // When connection is established, send handshake with schema info:
-    // {
-    //   type: 'handshake',
-    //   sessionCode: sessionCode,
-    //   module: {
-    //     name: 'mage-hand',
-    //     version: game.modules.get(this.moduleId).version
-    //   },
-    //   foundry: {
-    //     version: game.version,
-    //     system: game.system.id,
-    //     systemVersion: game.system.version
-    //   },
-    //   schema: schemaMetadata
-    // }
+    if (!this.websocketHandler) {
+      logger.error('WebSocket handler not initialized');
+      return;
+    }
     
     this.sessionCode = sessionCode;
+    this.websocketHandler.connect(sessionCode);
   }
 
   disconnect() {
-    console.log('Mage Hand | Disconnecting');
-    if (this.socket) {
-      this.socket.close();
-      this.socket = null;
+    logger.info('Disconnecting');
+    if (this.websocketHandler) {
+      this.websocketHandler.disconnect();
     }
     this.sessionCode = null;
+    
+    // Notify UI of disconnection
+    if (this.ui) {
+      this.ui.onConnectionStateChange('disconnected');
+    }
   }
 
   handleActorUpdate(actor, changes) {
@@ -226,31 +266,20 @@ class MageHand {
   }
   
   sendUpdate(actorId, diff) {
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return;
-    
-    const message = {
-      type: 'update',
-      actorId: actorId,
-      updates: diff,
-      timestamp: Date.now()
-    };
+    if (!this.websocketHandler || !this.websocketHandler.isConnected()) return;
     
     console.log(`Mage Hand | Sending diff update for actor ${actorId}:`, diff);
-    this.socket.send(JSON.stringify(message));
+    this.websocketHandler.sendCharacterUpdate(actorId, diff);
   }
   
   sendFullSync(actorId, data) {
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) return;
-    
-    const message = {
-      type: 'fullSync',
-      actorId: actorId,
-      data: data,
-      timestamp: Date.now()
-    };
+    if (!this.websocketHandler || !this.websocketHandler.isConnected()) return;
     
     console.log(`Mage Hand | Sending full sync for actor ${actorId}`);
-    this.socket.send(JSON.stringify(message));
+    const actor = game.actors.get(actorId);
+    if (actor) {
+      this.websocketHandler.sendCharacterData(actor);
+    }
   }
 
   handleItemUpdate(actor, item, changes) {
@@ -364,6 +393,135 @@ class MageHand {
   validateCharacterData(data) {
     return SchemaRegistry.validate(data);
   }
+
+  // ============================================================================
+  // Mobile Request Handlers
+  // ============================================================================
+
+  async handleRollRequest(message) {
+    console.log('Mage Hand | Handling custom roll:', message.formula, message.label);
+    try {
+      // Custom roll with formula
+      const roll = new Roll(message.formula);
+      await roll.toMessage({
+        speaker: ChatMessage.getSpeaker(),
+        flavor: message.label || 'Custom Roll'
+      });
+    } catch (error) {
+      console.error('Mage Hand | Roll error:', error);
+    }
+  }
+
+  async handleItemUse(message) {
+    console.log('Mage Hand | Handling item use:', message.itemId, 'targets:', message.targetIds);
+    try {
+      // Get the actor from the message connection
+      const actor = game.actors.get(message.actorId);
+      if (!actor) {
+        console.error('Mage Hand | Actor not found for item use');
+        return;
+      }
+      
+      // Use the roller to handle item use
+      await this.roller.useItem(actor.id, message.itemId, 'normal');
+    } catch (error) {
+      console.error('Mage Hand | Item use error:', error);
+    }
+  }
+
+  async handleAbilityCheck(message) {
+    console.log('Mage Hand | Handling ability check:', message.ability);
+    try {
+      const actor = game.actors.get(message.actorId);
+      if (!actor) {
+        console.error('Mage Hand | Actor not found for ability check');
+        return;
+      }
+      
+      // Validate ability
+      const validAbilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+      if (!validAbilities.includes(message.ability)) {
+        console.error('Mage Hand | Invalid ability:', message.ability);
+        return;
+      }
+      
+      // Roll ability test
+      await this.roller.rollAbilityTest(actor.id, message.ability, message.mode || 'normal');
+    } catch (error) {
+      console.error('Mage Hand | Ability check error:', error);
+    }
+  }
+
+  async handleAbilitySave(message) {
+    console.log('Mage Hand | Handling ability save:', message.ability);
+    try {
+      const actor = game.actors.get(message.actorId);
+      if (!actor) {
+        console.error('Mage Hand | Actor not found for ability save');
+        return;
+      }
+      
+      // Validate ability
+      const validAbilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+      if (!validAbilities.includes(message.ability)) {
+        console.error('Mage Hand | Invalid ability:', message.ability);
+        return;
+      }
+      
+      // Roll ability save
+      await this.roller.rollAbilitySave(actor.id, message.ability, message.mode || 'normal');
+    } catch (error) {
+      console.error('Mage Hand | Ability save error:', error);
+    }
+  }
+
+  async handleSkillCheck(message) {
+    console.log('Mage Hand | Handling skill check:', message.skill);
+    try {
+      const actor = game.actors.get(message.actorId);
+      if (!actor) {
+        console.error('Mage Hand | Actor not found for skill check');
+        return;
+      }
+      
+      // Roll skill check
+      await this.roller.rollSkillCheck(actor.id, message.skill, message.mode || 'normal');
+    } catch (error) {
+      console.error('Mage Hand | Skill check error:', error);
+    }
+  }
+
+  async handleWeaponAttack(message) {
+    console.log('Mage Hand | Handling weapon attack:', message.weaponId, 'vs', message.targetId);
+    try {
+      const actor = game.actors.get(message.actorId);
+      if (!actor) {
+        console.error('Mage Hand | Actor not found for weapon attack');
+        return;
+      }
+      
+      // Roll weapon attack
+      await this.roller.weaponAttack(actor.id, message.weaponId, 'normal');
+    } catch (error) {
+      console.error('Mage Hand | Weapon attack error:', error);
+    }
+  }
+
+  async handleSpellCast(message) {
+    console.log('Mage Hand | Handling spell cast:', message.spellId, 'level', message.level, 'targets:', message.targetIds);
+    try {
+      const actor = game.actors.get(message.actorId);
+      if (!actor) {
+        console.error('Mage Hand | Actor not found for spell cast');
+        return;
+      }
+      
+      // Cast spell (useItem handles spells too)
+      await this.roller.useItem(actor.id, message.spellId, 'normal');
+    } catch (error) {
+      console.error('Mage Hand | Spell cast error:', error);
+    }
+  }
 }
 
 const mageHand = new MageHand();
@@ -376,8 +534,8 @@ Hooks.once('init', () => {
   game.mageHand = mageHand;
 });
 
-Hooks.once('ready', () => {
-  mageHand.ready();
+Hooks.once('ready', async () => {
+  await mageHand.ready();
   
   // Log API usage examples
   console.log('Mage Hand | API Usage Examples:');
@@ -398,4 +556,7 @@ Hooks.once('ready', () => {
   console.log('  Item damage: mageHand.itemDamage("Character Name", "Wand of Magic Missiles", false)');
   console.log('  Click chat button: mageHand.clickChatButton("messageId", "attack")');
   console.log('  Modes: "normal", "advantage", "disadvantage"');
+  console.log('  Kill tracking: mageHand.killTracker.getRecentKills()');
+  console.log('  Kill stats: mageHand.killTracker.getKillStats()');
+  console.log('  Clear kills: mageHand.killTracker.clear()');
 });

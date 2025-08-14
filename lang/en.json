@@ -3,7 +3,7 @@
     "Settings": {
       "SessionCode": {
         "Name": "Session Code",
-        "Hint": "Enter the 6-character code from your Mage Hand app (format: XXX-XXX)"
+        "Hint": "Enter the session code from your Mage Hand app (format: REGION-XXX-XXX)"
       },
       "RelayServer": {
         "Name": "Relay Server URL",
@@ -11,7 +11,7 @@
       }
     },
     "Status": {
-      "Connected": "Connected to Mage Hand",
+      "Connected": "Connected",
       "Disconnected": "Disconnected",
       "Connecting": "Connecting...",
       "InvalidCode": "Invalid session code format"
@@ -21,6 +21,25 @@
       "Disconnected": "Mage Hand disconnected",
       "ConnectionFailed": "Failed to connect to Mage Hand relay server",
       "CharacterSynced": "Character {name} synced to mobile app"
+    },
+    "UI": {
+      "Connect": "Mage Hand",
+      "ConnectToMobile": "Connect to Mobile Device",
+      "SessionCode": "Session Code",
+      "EnterCode": "Enter session code",
+      "CodeHelp": "Enter the session code shown in your mobile app",
+      "Connected": "Connected",
+      "Disconnect": "Disconnect",
+      "ConnectedDevices": "Connected Devices",
+      "NoDevicesConnected": "No devices connected yet",
+      "MobileDevice": "Mobile Device",
+      "DisconnectDevice": "Disconnect device",
+      "World": "World",
+      "User": "User",
+      "ConnectedSince": "Connected",
+      "LastSession": "Last session",
+      "CopyCode": "Copy code",
+      "CodeCopied": "Session code copied to clipboard"
     }
   }
 }

@@ -1,0 +1,155 @@
+<div class="mage-hand-connection-panel">
+  <!-- Connection Status Header -->
+  <div class="mage-hand-status-header">
+    <div class="status-indicator {{connectionState}}">
+      <i class="fas {{#if isConnected}}fa-check-circle{{else}}fa-circle{{/if}}"></i>
+      <span class="status-text">
+        {{#if isConnected}}
+          {{localize "MAGEHAND.Status.Connected"}}
+        {{else if (eq connectionState "connecting")}}
+          {{localize "MAGEHAND.Status.Connecting"}}
+        {{else}}
+          {{localize "MAGEHAND.Status.Disconnected"}}
+        {{/if}}
+      </span>
+    </div>
+  </div>
+
+  <!-- Notification Area -->
+  {{#if notifications.length}}
+  <div class="mage-hand-notifications">
+    {{#each notifications as |notification|}}
+    <div class="notification {{notification.type}}" data-notification-id="{{notification.id}}">
+      <div class="notification-content">
+        <i class="fas {{#if (eq notification.type 'error')}}fa-exclamation-circle{{else if (eq notification.type 'warning')}}fa-exclamation-triangle{{else if (eq notification.type 'success')}}fa-check-circle{{else}}fa-info-circle{{/if}}"></i>
+        <span class="notification-message">{{notification.message}}</span>
+      </div>
+      <button class="notification-close" data-notification-id="{{notification.id}}">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
+
+  {{#unless isConnected}}
+  <!-- Connection Form -->
+  <div class="connection-form">
+    <div class="form-header">
+      <i class="fas fa-mobile-alt"></i>
+      <h3>{{localize "MAGEHAND.UI.ConnectToMobile"}}</h3>
+    </div>
+    
+    <div class="session-input-group">
+      <input type="text" 
+             id="session-code-input" 
+             class="session-code-input" 
+             placeholder="{{localize 'MAGEHAND.UI.EnterCode'}}" 
+             maxlength="11"
+             autocomplete="off"
+             spellcheck="false"
+             pattern="[A-Z]{3}-[A-Z0-9]{3}-[A-Z0-9]{3}"
+             title="Format: NYC-ABC-123">
+      <button type="button" class="connect-btn" id="connect-btn" disabled>
+        <i class="fas fa-link"></i>
+        {{localize "MAGEHAND.UI.Connect"}}
+      </button>
+    </div>
+    
+    <div class="form-help">
+      <i class="fas fa-info-circle"></i>
+      <span>{{localize "MAGEHAND.UI.CodeHelp"}}</span>
+    </div>
+
+    {{#if sessionAge}}
+    <div class="last-session-info">
+      <i class="fas fa-history"></i>
+      <span>{{localize "MAGEHAND.UI.LastSession"}}: {{sessionAge}}</span>
+    </div>
+    {{/if}}
+  </div>
+  {{/unless}}
+
+  {{#if isConnected}}
+  <!-- Connected Info -->
+  <div class="connection-info">
+    <div class="info-section">
+      <div class="info-row">
+        <span class="info-label">{{localize "MAGEHAND.UI.SessionCode"}}:</span>
+        <span class="info-value session-code-display">{{sessionCode}}</span>
+        <button type="button" id="copy-code-btn" class="copy-btn" title="{{localize 'MAGEHAND.UI.CopyCode'}}">
+          <i class="fas fa-copy"></i>
+        </button>
+      </div>
+      <div class="info-row">
+        <span class="info-label">{{localize "MAGEHAND.UI.World"}}:</span>
+        <span class="info-value">{{worldId}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">{{localize "MAGEHAND.UI.User"}}:</span>
+        <span class="info-value">{{userName}}</span>
+      </div>
+      {{#if sessionAge}}
+      <div class="info-row">
+        <span class="info-label">{{localize "MAGEHAND.UI.ConnectedSince"}}:</span>
+        <span class="info-value">{{sessionAge}}</span>
+      </div>
+      {{/if}}
+    </div>
+
+    {{#if connectedClients.length}}
+    <!-- Connected Devices -->
+    <div class="connected-devices">
+      <div class="devices-header">
+        <i class="fas fa-users"></i>
+        <span>{{localize "MAGEHAND.UI.ConnectedDevices"}} ({{connectedClients.length}})</span>
+      </div>
+      
+      <div class="devices-list">
+        {{#each connectedClients as |client|}}
+        <div class="device-item">
+          <div class="device-info">
+            <i class="fas fa-mobile-alt"></i>
+            <div class="device-details">
+              <span class="device-name">
+                {{#if client.characterName}}
+                  {{client.characterName}}
+                {{else if client.deviceName}}
+                  {{client.deviceName}}
+                {{else}}
+                  {{localize "MAGEHAND.UI.MobileDevice"}}
+                {{/if}}
+              </span>
+              <span class="device-status">
+                {{#if client.status}}
+                  {{client.status}}
+                {{else}}
+                  {{localize "MAGEHAND.UI.Connected"}}
+                {{/if}}
+              </span>
+            </div>
+          </div>
+          <button class="disconnect-device-btn" data-client-id="{{client.id}}" title="{{localize 'MAGEHAND.UI.DisconnectDevice'}}">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+    {{else}}
+    <div class="no-devices">
+      <i class="fas fa-info-circle"></i>
+      <span>{{localize "MAGEHAND.UI.NoDevicesConnected"}}</span>
+    </div>
+    {{/if}}
+
+    <!-- Disconnect Button -->
+    <div class="connection-actions">
+      <button type="button" class="disconnect-btn" id="disconnect-btn">
+        <i class="fas fa-unlink"></i>
+        {{localize "MAGEHAND.UI.Disconnect"}}
+      </button>
+    </div>
+  </div>
+  {{/if}}
+</div>

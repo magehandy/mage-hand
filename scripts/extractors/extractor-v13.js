@@ -8,6 +8,11 @@ export class ExtractorV13 extends BaseExtractor {
   }
 
   getRace(actor) {
+    // NPCs don't have race items
+    if (actor.type === 'npc') {
+      return { name: '', img: '' };
+    }
+    
     const items = actor.items.filter(i => i.type === 'race');
     const races = items.map(act => ({
       name: act.name,
@@ -18,6 +23,11 @@ export class ExtractorV13 extends BaseExtractor {
   }
 
   getBackground(actor) {
+    // NPCs don't have background items
+    if (actor.type === 'npc') {
+      return [];
+    }
+    
     const items = actor.items.filter(i => i.type === 'background');
     return items.map(act => ({
       name: act.name,
@@ -26,6 +36,11 @@ export class ExtractorV13 extends BaseExtractor {
   }
 
   getClasses(actor) {
+    // NPCs don't have class items
+    if (actor.type === 'npc') {
+      return [];
+    }
+    
     const items = actor.items.filter(i => i.type === 'class' && i.system.isOriginalClass);
     
     return items.map(act => {
@@ -143,15 +158,26 @@ export class ExtractorV13 extends BaseExtractor {
     
     abilities.forEach(ab => {
       const ability = actor.system.abilities[ab];
-      // D&D5e v5 uses save.value format
-      const saveValue = ability?.save?.value !== undefined ? ability.save.value : ability?.mod || 0;
       
-      result[ab] = {
-        value: ability?.value || 10,
-        modifier: ability?.mod || 0,
-        proficient: ability?.proficient || 0,
-        saveValue: saveValue
-      };
+      // NPCs sometimes have missing abilities - provide defaults
+      if (!ability) {
+        result[ab] = {
+          value: 10,
+          modifier: 0,
+          proficient: 0,
+          saveValue: 0
+        };
+      } else {
+        // D&D5e v5 uses save.value format
+        const saveValue = ability.save?.value !== undefined ? ability.save.value : ability.mod || 0;
+        
+        result[ab] = {
+          value: ability.value || 10,
+          modifier: ability.mod || 0,
+          proficient: ability.proficient || 0,
+          saveValue: saveValue
+        };
+      }
     });
     
     return result;

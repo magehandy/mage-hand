@@ -8,6 +8,11 @@ export class ExtractorV11 extends BaseExtractor {
   }
 
   getRace(actor) {
+    // NPCs don't have race items
+    if (actor.type === 'npc') {
+      return { name: '', img: '' };
+    }
+    
     const items = actor.items.filter(i => i.type === 'race');
     const races = items.map(act => ({
       name: act.name,
@@ -18,6 +23,11 @@ export class ExtractorV11 extends BaseExtractor {
   }
 
   getBackground(actor) {
+    // NPCs don't have background items
+    if (actor.type === 'npc') {
+      return [];
+    }
+    
     const items = actor.items.filter(i => i.type === 'background');
     return items.map(act => ({
       name: act.name,
@@ -26,6 +36,11 @@ export class ExtractorV11 extends BaseExtractor {
   }
 
   getClasses(actor) {
+    // NPCs don't have class items
+    if (actor.type === 'npc') {
+      return [];
+    }
+    
     const items = actor.items.filter(i => {
       if (i.type !== 'class') return false;
       return i.system.isOriginalClass !== undefined ? i.system.isOriginalClass : true;
@@ -214,12 +229,23 @@ export class ExtractorV11 extends BaseExtractor {
     
     abilities.forEach(ab => {
       const ability = actor.system.abilities[ab];
-      result[ab] = {
-        value: ability?.value || 10,
-        modifier: ability?.mod || 0,
-        proficient: ability?.proficient || (ability?.save > ability?.mod ? 1 : 0) || 0,
-        saveValue: ability?.save || ability?.mod || 0
-      };
+      
+      // NPCs sometimes have missing abilities - provide defaults
+      if (!ability) {
+        result[ab] = {
+          value: 10,
+          modifier: 0,
+          proficient: 0,
+          saveValue: 0
+        };
+      } else {
+        result[ab] = {
+          value: ability.value || 10,
+          modifier: ability.mod || 0,
+          proficient: ability.proficient || (ability.save > ability.mod ? 1 : 0) || 0,
+          saveValue: ability.save || ability.mod || 0
+        };
+      }
     });
     
     return result;

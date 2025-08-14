@@ -5,18 +5,18 @@
 
 export class SchemaRegistry {
   /**
-   * Current schema version - INCREMENT THIS when making breaking changes
-   * @type {number}
+   * Current schema version - Uses semantic versioning
+   * @type {string}
    */
-  static CURRENT_VERSION = 1;
+  static CURRENT_VERSION = "1.0.0";
 
   /**
    * Schema definitions for each version
    * @type {Object}
    */
   static SCHEMAS = {
-    1: {
-      version: 1,
+    "1.0.0": {
+      version: "1.0.0",
       name: 'Combat Focus',
       released: '2024-01-01',
       features: [
@@ -41,12 +41,12 @@ export class SchemaRegistry {
       ]
     },
     // Future versions will be added here
-    // 2: {
-    //   version: 2,
+    // "2.0.0": {
+    //   version: "2.0.0",
     //   name: 'Inventory Expansion',
     //   released: '2024-XX-XX',
     //   features: [
-    //     ...SCHEMAS[1].features,
+    //     ...SCHEMAS["1.0.0"].features,
     //     'inventory-items',     // all items not just weapons
     //     'class-features',      // class and subclass features
     //     'feats',              // character feats
@@ -61,7 +61,7 @@ export class SchemaRegistry {
     //     // Migration function from v1 to v2
     //     return {
     //       ...v1Data,
-    //       _v: 2,
+    //       _v: "2.0.0",
     //       inventory: [],
     //       features: [],
     //       resources: {}
@@ -69,6 +69,44 @@ export class SchemaRegistry {
     //   }
     // }
   };
+
+  /**
+   * Parse semantic version string into components
+   * @param {string} version - Version string (e.g., "1.0.0")
+   * @returns {Object} Version components {major, minor, patch}
+   * @private
+   */
+  static parseVersion(version) {
+    const parts = version.split('.').map(Number);
+    return {
+      major: parts[0] || 0,
+      minor: parts[1] || 0,
+      patch: parts[2] || 0
+    };
+  }
+
+  /**
+   * Compare two semantic versions
+   * @param {string} v1 - First version
+   * @param {string} v2 - Second version
+   * @returns {number} -1 if v1 < v2, 0 if equal, 1 if v1 > v2
+   * @private
+   */
+  static compareVersions(v1, v2) {
+    const ver1 = this.parseVersion(v1);
+    const ver2 = this.parseVersion(v2);
+    
+    if (ver1.major !== ver2.major) {
+      return ver1.major < ver2.major ? -1 : 1;
+    }
+    if (ver1.minor !== ver2.minor) {
+      return ver1.minor < ver2.minor ? -1 : 1;
+    }
+    if (ver1.patch !== ver2.patch) {
+      return ver1.patch < ver2.patch ? -1 : 1;
+    }
+    return 0;
+  }
 
   /**
    * Get the current schema definition
@@ -80,7 +118,7 @@ export class SchemaRegistry {
 
   /**
    * Get a specific schema version
-   * @param {number} version - Schema version number
+   * @param {string} version - Schema version (e.g., "1.0.0")
    * @returns {Object|null} Schema definition or null if not found
    */
   static getSchema(version) {
@@ -90,7 +128,7 @@ export class SchemaRegistry {
   /**
    * Check if a feature is supported in a given schema version
    * @param {string} feature - Feature identifier
-   * @param {number} version - Schema version (defaults to current)
+   * @param {string} version - Schema version (defaults to current)
    * @returns {boolean} True if feature is supported
    */
   static hasFeature(feature, version = this.CURRENT_VERSION) {
@@ -108,14 +146,15 @@ export class SchemaRegistry {
 
   /**
    * Check compatibility between two schema versions
-   * @param {number} clientVersion - Client's schema version
-   * @param {number} serverVersion - Server's schema version (defaults to current)
+   * @param {string} clientVersion - Client's schema version
+   * @param {string} serverVersion - Server's schema version (defaults to current)
    * @returns {Object} Compatibility information
    */
   static checkCompatibility(clientVersion, serverVersion = this.CURRENT_VERSION) {
+    const comparison = this.compareVersions(clientVersion, serverVersion);
     const compatible = clientVersion === serverVersion;
-    const canUpgrade = clientVersion < serverVersion && this.canMigrate(clientVersion, serverVersion);
-    const canDowngrade = clientVersion > serverVersion; // Client newer than server
+    const canUpgrade = comparison < 0 && this.canMigrate(clientVersion, serverVersion);
+    const canDowngrade = comparison > 0; // Client newer than server
     
     return {
       compatible,
@@ -129,34 +168,52 @@ export class SchemaRegistry {
 
   /**
    * Get human-readable compatibility message
-   * @param {number} clientVersion - Client's schema version
-   * @param {number} serverVersion - Server's schema version
+   * @param {string} clientVersion - Client's schema version
+   * @param {string} serverVersion - Server's schema version
    * @returns {string} Compatibility message
    */
   static getCompatibilityMessage(clientVersion, serverVersion) {
-    if (clientVersion === serverVersion) {
+    const comparison = this.compareVersions(clientVersion, serverVersion);
+    
+    if (comparison === 0) {
       return `Schema versions match (v${clientVersion})`;
     }
-    if (clientVersion < serverVersion) {
+    if (comparison < 0) {
       return `Client schema v${clientVersion} is older than server v${serverVersion}. Update may be required.`;
     }
-    if (clientVersion > serverVersion) {
+    if (comparison > 0) {
       return `Client schema v${clientVersion} is newer than server v${serverVersion}. Some features may not be available.`;
     }
   }
 
   /**
+   * Get all schema versions in order
+   * @returns {Array<string>} Sorted array of version strings
+   * @private
+   */
+  static getVersionsInOrder() {
+    return Object.keys(this.SCHEMAS).sort(this.compareVersions.bind(this));
+  }
+
+  /**
    * Check if migration path exists between versions
-   * @param {number} fromVersion - Starting version
-   * @param {number} toVersion - Target version
+   * @param {string} fromVersion - Starting version
+   * @param {string} toVersion - Target version
    * @returns {boolean} True if migration is possible
    */
   static canMigrate(fromVersion, toVersion) {
-    if (fromVersion >= toVersion) return false;
+    const comparison = this.compareVersions(fromVersion, toVersion);
+    if (comparison >= 0) return false; // Can't migrate backwards or to same version
+    
+    const versions = this.getVersionsInOrder();
+    const fromIndex = versions.indexOf(fromVersion);
+    const toIndex = versions.indexOf(toVersion);
+    
+    if (fromIndex === -1 || toIndex === -1) return false;
     
     // Check if all intermediate versions have migration functions
-    for (let v = fromVersion + 1; v <= toVersion; v++) {
-      const schema = this.getSchema(v);
+    for (let i = fromIndex + 1; i <= toIndex; i++) {
+      const schema = this.getSchema(versions[i]);
       if (!schema || !schema.migration) {
         return false;
       }
@@ -167,7 +224,7 @@ export class SchemaRegistry {
   /**
    * Migrate data from one schema version to another
    * @param {Object} data - Data to migrate
-   * @param {number} targetVersion - Target schema version
+   * @param {string} targetVersion - Target schema version
    * @returns {Object} Migrated data
    */
   static migrate(data, targetVersion = this.CURRENT_VERSION) {
@@ -178,17 +235,28 @@ export class SchemaRegistry {
     let currentVersion = data._v;
     let migratedData = { ...data };
     
+    const versions = this.getVersionsInOrder();
+    const currentIndex = versions.indexOf(currentVersion);
+    const targetIndex = versions.indexOf(targetVersion);
+    
+    if (currentIndex === -1) {
+      throw new Error(`Unknown schema version: ${currentVersion}`);
+    }
+    if (targetIndex === -1) {
+      throw new Error(`Unknown target version: ${targetVersion}`);
+    }
+    
     // Apply migrations sequentially
-    while (currentVersion < targetVersion) {
-      const nextVersion = currentVersion + 1;
+    for (let i = currentIndex + 1; i <= targetIndex; i++) {
+      const nextVersion = versions[i];
       const schema = this.getSchema(nextVersion);
       
       if (!schema || !schema.migration) {
-        throw new Error(`No migration path from v${currentVersion} to v${nextVersion}`);
+        throw new Error(`No migration path from v${versions[i-1]} to v${nextVersion}`);
       }
       
       migratedData = schema.migration(migratedData);
-      currentVersion = nextVersion;
+      migratedData._v = nextVersion;
     }
     
     return migratedData;
@@ -200,21 +268,24 @@ export class SchemaRegistry {
    */
   static getHandshakeMetadata() {
     const current = this.getCurrentSchema();
+    const allVersions = this.getVersionsInOrder();
+    
     return {
       schemaVersion: this.CURRENT_VERSION,
       schemaName: current.name,
       features: current.features,
-      supportedVersions: Object.keys(this.SCHEMAS).map(Number),
-      canMigrateFrom: Object.keys(this.SCHEMAS)
-        .map(Number)
-        .filter(v => v < this.CURRENT_VERSION && this.canMigrate(v, this.CURRENT_VERSION))
+      supportedVersions: allVersions,
+      canMigrateFrom: allVersions.filter(v => 
+        this.compareVersions(v, this.CURRENT_VERSION) < 0 && 
+        this.canMigrate(v, this.CURRENT_VERSION)
+      )
     };
   }
 
   /**
    * Validate that extracted data conforms to schema
    * @param {Object} data - Extracted character data
-   * @param {number} version - Schema version to validate against
+   * @param {string} version - Schema version to validate against
    * @returns {Object} Validation result
    */
   static validate(data, version = this.CURRENT_VERSION) {
@@ -228,8 +299,8 @@ export class SchemaRegistry {
       warnings.push(`Schema version mismatch: expected v${version}, got v${data._v}`);
     }
     
-    // Check required base fields for v1
-    if (version === 1) {
+    // Check required base fields for v1.0.0
+    if (version === "1.0.0") {
       const requiredFields = ['id', 'name', 'type'];
       for (const field of requiredFields) {
         if (!data[field]) {

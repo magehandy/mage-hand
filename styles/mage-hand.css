@@ -1,3 +1,4 @@
+/* Status Indicators */
 .mage-hand-status {
   display: inline-block;
   width: 10px;
@@ -26,9 +27,417 @@
   100% { opacity: 1; }
 }
 
+/* Session Code Display */
 .mage-hand-session-code {
   font-family: monospace;
   font-size: 1.2em;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+/* Sidebar Button */
+button[data-action="mage-hand"] {
+  position: relative;
+}
+
+button[data-action="mage-hand"].connected::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background-color: #4caf50;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+button[data-action="mage-hand"].connecting::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background-color: #ff9800;
+  border-radius: 50%;
+  animation: pulse 1s infinite;
+}
+
+/* Connection Panel */
+.mage-hand-connection-panel {
+  padding: 1rem;
+}
+
+/* Override colors for better visibility on both light and dark themes */
+.app.mage-hand-connection {
+  --mh-text-primary: rgba(255, 255, 255, 0.9);
+  --mh-text-secondary: rgba(255, 255, 255, 0.6);
+  --mh-bg-subtle: rgba(255, 255, 255, 0.05);
+  --mh-border-subtle: rgba(255, 255, 255, 0.1);
+}
+
+/* Light theme override */
+body.theme-light .app.mage-hand-connection {
+  --mh-text-primary: rgba(0, 0, 0, 0.87);
+  --mh-text-secondary: rgba(0, 0, 0, 0.6);
+  --mh-bg-subtle: rgba(0, 0, 0, 0.05);
+  --mh-border-subtle: rgba(0, 0, 0, 0.12);
+}
+
+.mage-hand-status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.status-indicator.connected {
+  color: #4caf50;
+}
+
+.status-indicator.disconnected {
+  color: #757575;
+}
+
+.status-indicator.connecting {
+  color: #ff9800;
+}
+
+/* Connection Form */
+.connection-form {
+  margin: 1rem 0;
+}
+
+.form-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.form-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.session-input-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.session-code-input {
+  flex: 1;
+  padding: 0.5rem;
+  font-family: monospace;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--color-border-light);
+  border-radius: 3px;
+}
+
+.session-code-input.valid {
+  border-color: #4caf50;
+  background-color: rgba(76, 175, 80, 0.05);
+}
+
+.session-code-input.invalid {
+  border-color: #f44336;
+  background-color: rgba(244, 67, 54, 0.05);
+}
+
+.connect-btn, .disconnect-btn {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-shadow-primary);
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.connect-btn:hover:not(:disabled) {
+  background-color: var(--color-shadow-highlight);
+}
+
+.connect-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.disconnect-btn {
+  background-color: #f44336;
+  width: 100%;
+  justify-content: center;
+}
+
+.disconnect-btn:hover {
+  background-color: #d32f2f;
+}
+
+.form-help {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--color-text-dark-secondary);
+  margin-top: 0.5rem;
+}
+
+/* Connection Info */
+.connection-info {
+  margin: 1rem 0;
+}
+
+.info-section {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+}
+
+.info-label {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+  min-width: 100px;
+}
+
+.info-value {
+  font-family: monospace;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 400;
+  text-align: right;
+  flex: 1;
+}
+
+.session-code-display {
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #4caf50;
+  font-weight: 500;
+}
+
+.copy-btn {
+  padding: 0.25rem 0.5rem;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  margin-left: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.copy-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Connected Devices */
+.connected-devices {
+  margin: 1rem 0;
+}
+
+.devices-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.devices-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.device-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.device-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.device-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.device-name {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.device-status {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.disconnect-device-btn {
+  padding: 0.25rem 0.5rem;
+  background-color: transparent;
+  border: 1px solid var(--color-border-light);
+  border-radius: 3px;
+  cursor: pointer;
+  color: #f44336;
+}
+
+.disconnect-device-btn:hover {
+  background-color: rgba(244, 67, 54, 0.1);
+  border-color: #f44336;
+}
+
+.no-devices {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Last Session Info */
+.last-session-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Connection Actions */
+.connection-actions {
+  margin-top: 1rem;
+}
+
+/* Notification Area */
+.mage-hand-notifications {
+  margin: 0.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.mage-hand-notifications .notification {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid;
+  animation: slideIn 0.3s ease;
+  font-size: 0.9rem;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.notification-content i {
+  font-size: 1rem;
+}
+
+.notification-message {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.notification-close {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.25rem;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.notification-close:hover {
+  opacity: 1;
+}
+
+/* Notification Types */
+.notification.error {
+  background-color: rgba(244, 67, 54, 0.1);
+  border-color: rgba(244, 67, 54, 0.3);
+  color: #ff6b6b;
+}
+
+.notification.warning {
+  background-color: rgba(255, 152, 0, 0.1);
+  border-color: rgba(255, 152, 0, 0.3);
+  color: #ffa726;
+}
+
+.notification.success {
+  background-color: rgba(76, 175, 80, 0.1);
+  border-color: rgba(76, 175, 80, 0.3);
+  color: #66bb6a;
+}
+
+.notification.info {
+  background-color: rgba(33, 150, 243, 0.1);
+  border-color: rgba(33, 150, 243, 0.3);
+  color: #42a5f5;
 }

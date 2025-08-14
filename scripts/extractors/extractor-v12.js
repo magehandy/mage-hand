@@ -8,6 +8,11 @@ export class ExtractorV12 extends BaseExtractor {
   }
 
   getRace(actor) {
+    // NPCs don't have race items
+    if (actor.type === 'npc') {
+      return { name: '', img: '' };
+    }
+    
     const items = actor.items.filter(i => i.type === 'race');
     const races = items.map(act => ({
       name: act.name,
@@ -18,6 +23,11 @@ export class ExtractorV12 extends BaseExtractor {
   }
 
   getBackground(actor) {
+    // NPCs don't have background items
+    if (actor.type === 'npc') {
+      return [];
+    }
+    
     const items = actor.items.filter(i => i.type === 'background');
     return items.map(act => ({
       name: act.name,
@@ -26,6 +36,11 @@ export class ExtractorV12 extends BaseExtractor {
   }
 
   getClasses(actor) {
+    // NPCs don't have class items
+    if (actor.type === 'npc') {
+      return [];
+    }
+    
     const items = actor.items.filter(i => i.type === 'class' && i.system.isOriginalClass);
     
     return items.map(act => {
@@ -188,22 +203,33 @@ export class ExtractorV12 extends BaseExtractor {
     
     abilities.forEach(ab => {
       const ability = actor.system.abilities[ab];
-      // Handle v4.3+ format (save.value) and older format (save)
-      let saveValue = ability?.save?.value !== undefined ? ability.save.value : 
-                     ability?.save !== undefined ? ability.save : 
-                     ability?.mod || 0;
       
-      // Handle string format from some versions
-      if (typeof saveValue === 'string') {
-        saveValue = parseInt(saveValue.replace(/[^-\d]/g, '')) || 0;
+      // NPCs sometimes have missing abilities - provide defaults
+      if (!ability) {
+        result[ab] = {
+          value: 10,
+          modifier: 0,
+          proficient: 0,
+          saveValue: 0
+        };
+      } else {
+        // Handle v4.3+ format (save.value) and older format (save)
+        let saveValue = ability.save?.value !== undefined ? ability.save.value : 
+                       ability.save !== undefined ? ability.save : 
+                       ability.mod || 0;
+        
+        // Handle string format from some versions
+        if (typeof saveValue === 'string') {
+          saveValue = parseInt(saveValue.replace(/[^-\d]/g, '')) || 0;
+        }
+        
+        result[ab] = {
+          value: ability.value || 10,
+          modifier: ability.mod || 0,
+          proficient: ability.proficient || 0,
+          saveValue: saveValue
+        };
       }
-      
-      result[ab] = {
-        value: ability?.value || 10,
-        modifier: ability?.mod || 0,
-        proficient: ability?.proficient || 0,
-        saveValue: saveValue
-      };
     });
     
     return result;

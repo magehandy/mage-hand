@@ -2,7 +2,7 @@
   "id": "mage-hand",
   "title": "Mage Hand",
   "description": "Real-time character synchronization between Foundry VTT and the Mage Hand iOS companion app",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "authors": [
     {
       "name": "Mage Hand",
