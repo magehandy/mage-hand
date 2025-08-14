@@ -117,6 +117,9 @@ export class WebSocketHandler {
     
     // Connected mobile clients - map of clientId -> MobileClient
     this.mobileClients = new Map();
+    
+    // Client snapshots for storing actor data
+    this.clientSnapshots = new Map();
   }
   
   /**
@@ -867,7 +870,7 @@ export class WebSocketHandler {
         }
       }
       
-      logger.info(`Mage Hand | Mobile client ${mobileToken} now in PLAY state with actor ${message.actorId}`);
+      logger.info(`Mage Hand | Mobile client ${mobileClientId} now in PLAY state with actor ${message.actorId}`);
     }
     
     // Update global state to PLAY
@@ -1230,7 +1233,9 @@ export class WebSocketHandler {
     
     this.updateConnectionState(ConnectionState.DISCONNECTED);
     this.mobileClients.clear();
-    this.clientSnapshots.clear();
+    if (this.clientSnapshots) {
+      this.clientSnapshots.clear();
+    }
   }
 
   /**
