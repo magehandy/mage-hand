@@ -18,7 +18,7 @@ export class BaseExtractor {
     const data = {
       _v: this.schemaVersion,
       name: actor.name,
-      id: actor.id,
+      _id: actor.id,  // iOS expects _id, not id
       type: actor.type,
       img: actor.img,
       classes: this.getClasses(actor),

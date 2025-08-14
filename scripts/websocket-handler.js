@@ -682,7 +682,7 @@ export class WebSocketHandler {
       }
     };
     
-    logger.info(`Mage Hand | Sending state to mobile ${requestingToken}:`, stateMessage.currentState);
+    logger.info(`Mage Hand | Sending state to mobile ${requestingClientId}:`, stateMessage.currentState);
     this.sendMessage(stateMessage);
   }
 
